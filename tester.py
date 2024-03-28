@@ -53,55 +53,33 @@ def narrow_wordspace(valid_letters: list[set[str]], unknown_letters: list[set[st
     return valid_letters, unknown_letters, invalid_letters
 
 
-def score_word(test_word: str, correct_word: str) -> int:
-    score: int = 0
-    possible_letters = {}
-
-    for i in range(len(test_word)):
-        test_letter = test_word[i]
-        correct_letter = correct_word[i]
-        if test_letter == correct_letter:
-            score += 2
-        elif test_letter in correct_word:
-            if not possible_letters.get(test_letter):
-                possible_letters[test_letter] = 0
-            possible_letters[test_letter] += 1
-
-    for letter in test_word:
-        if possible_letters.get(letter):
-            possible_letters[letter] -= 1
-            if possible_letters[letter] >= 0:
-                score += 1
-
-    return score
-
-
 def get_string_score(test_word: str, correct_word: str) -> str:
+    length: int = len(correct_word)
     score = ["" for _ in range(5)]
-    possible_letters = {}
 
-    for i in range(len(test_word)):
-        test_letter = test_word[i]
-        correct_letter = correct_word[i]
-        if test_letter == correct_letter:
-            score[i] = '*'
-        elif test_letter not in correct_word:
+    for i in range(length):
+        if test_word[i] == correct_word[i]:
+            score[i] = "*"
+        else:
             score[i] = "!"
-        elif test_letter in correct_word:
-            if not possible_letters.get(test_letter):
-                possible_letters[test_letter] = 0
-            possible_letters[test_letter] += 1
 
-    for i in range(len(test_word)):
-        if score[i] == "":
-            letter = test_word[i]
-            possible_letters[letter] -= 1
-            if possible_letters[letter] >= 0:
-                score[i] = "?"
-            else:
-                score[i] = "!"
+    for i in range(length):
+        if score[i] == "!":
+            for j in range(length):
+                if i == j: continue
+                if test_word[i] == correct_word[j]:
+                    counter = 0
+                    for k in range(length):
+                        if correct_word[k] == correct_word[j]: counter += 1
+                        if test_word[k] == correct_word[j] and score[k] != "!": counter -= 1
+                    if counter > 0: score[i] = "?"
 
     return ''.join(score)
+
+
+def score_word(test_word: str, correct_word: str) -> int:
+    score = get_string_score(test_word, correct_word)
+    return 2 * score.count("*") + score.count("?")
 
 
 def scoring_potential(current_word: str, solutions: set[str]) -> int:
@@ -115,18 +93,18 @@ def scoring_potential(current_word: str, solutions: set[str]) -> int:
 def next_word(guesses: set[str], solutions: set[str]) -> str:
     potentials = {word: scoring_potential(word, solutions) for word in guesses}
     if len(potentials) == 0:
-        raise ValueError("No word found!")
+        return ""
+        # raise ValueError("No word found!")
     current_word, potential = max(potentials.items(), key=lambda x: x[1])
     return current_word
 
 
-def guess_word(guesses: set[str], solutions: set[str], correct_word: str) -> int:
+def guess_word(solutions: set[str], correct_word: str) -> int:
     valid_letters: list[set[str]] = [set() for _ in range(5)]
     unknown_letters: list[set[str]] = [set() for _ in range(5)]
     invalid_letters: list[set[str]] = [set() for _ in range(5)]
 
-    current_word = "saree"
-    guesses.discard(current_word)
+    current_word = "soare"
     solutions.discard(current_word)
 
     for i in range(5):
@@ -136,11 +114,9 @@ def guess_word(guesses: set[str], solutions: set[str], correct_word: str) -> int
         valid_letters, unknown_letters, invalid_letters = narrow_wordspace(valid_letters, unknown_letters, invalid_letters, current_word, score)
         solutions = find_valid_words(valid_letters, unknown_letters, invalid_letters, solutions)
 
-        if score.count("*") >= 3 or i >= 1 or len(solutions) == 1:
-            guesses = solutions.copy()
-
-        current_word = next_word(guesses, solutions)
-        guesses.discard(current_word)
+        current_word = next_word(solutions, solutions)
+        if not current_word:
+            return 0
         solutions.discard(current_word)
 
     if current_word == correct_word:
@@ -149,20 +125,26 @@ def guess_word(guesses: set[str], solutions: set[str], correct_word: str) -> int
     return 0
 
 def main() -> None:
-    with open('guesses.txt', 'r') as f:
-        guesses = set([word.strip() for word in f.readlines() if word.strip()])
-
     with open('solutions.txt', 'r') as f:
         solutions = [word.strip() for word in f.readlines() if word.strip()]
 
     values = []
-    for i in range(1000):
-        print(i)
-        values.append(guess_word(guesses.copy(), set(solutions), random.choice(solutions)))
+    incorrect = 0
+    for i in range(len(solutions)):
+        print(f'{i}/{len(solutions)}')
+        result = guess_word(set(solutions), solutions[i])
+        if result == 0:
+            incorrect += 1
+            continue
+        values.append(result)
+
+    print(f'{incorrect} incorrect guesses')
+    print(f'Mean: {np.mean(values)}')
+    print(f'Median: {np.median(values)}')
+    print(f'Standard Deviation: {np.std(values)}')
 
     plt.hist(values, bins=np.arange(8)-0.5, ec="k")
     plt.show()
-
 
 if __name__ == "__main__":
     main()
