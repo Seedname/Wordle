@@ -31,6 +31,8 @@ def find_valid_words(test_word: str, score: str, solutions: set[str]) -> set[str
 
 
 def score_word(test_word: str, correct_word: str) -> int:
+    # same as get_string_score(test_word, correct_word) with * being score of 2, ? being score of 1, and ! being score of 0
+    
     length: int = len(correct_word)
     score: list[int] = [0 for _ in range(5)]
 
@@ -69,16 +71,26 @@ def next_word(guesses: set[str], solutions: set[str]) -> str:
 
 
 def guess_word(solutions: set[str]) -> None:
-    current_word = "soare"
+    current_word = input("Enter word or leave blank to auto-generate: ")
+    if current_word == "":
+        current_word = "soare"
+        
     solutions.discard(current_word)
 
     print(f'Current Word: {current_word}')
 
     for i in range(5):
         score = input("Enter Response: ")
+
+        if score == "*****":
+            print("Solved!")
+            break
+
         solutions = find_valid_words(current_word, score, solutions)
 
-        current_word = next_word(solutions, solutions)
+        current_word = input("Enter word or leave blank to auto-generate: ")
+        if current_word == "":
+            current_word = next_word(solutions, solutions)
         solutions.discard(current_word)
 
         print(f'Current Word: {current_word}')
